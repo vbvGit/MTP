@@ -31,7 +31,7 @@ def preprocessTaskData_xl(filename):
     ws = wb.active
 
     T = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 98,min_col = 1,max_col = 4,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row = 7,min_col = 1,max_col = 4,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         T[row[0]].append(skills)
@@ -44,7 +44,7 @@ def preprocessVolunteerData_xl(filename):
     ws = wb.active
 
     A = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 1576,min_col = 1,max_col = 6,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row = 7,min_col = 1,max_col = 6,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         slot = preprocess_loc_slot_xl(row[4],row[5])
@@ -403,7 +403,7 @@ def driver(T,A,cost):
 
 
 start_time = time.time()
-Tasks = preprocessTaskData_xl("Tasks.xlsx")
-Applicants = preprocessVolunteerData_xl("Applicants.xlsx")
+Tasks = preprocessTaskData_xl("Tasks_Sample.xlsx")
+Applicants = preprocessVolunteerData_xl("Applicants_Sample.xlsx")
 VTM,success_ratio,utilityScores,NetUtilityScore = driver(Tasks,Applicants,1)
 print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\n\nUtility scores for all participants:\n{utilityScores}\n\nNetUtilityScore = {NetUtilityScore}\n\nTotal time taken : {time.time()-start_time}")

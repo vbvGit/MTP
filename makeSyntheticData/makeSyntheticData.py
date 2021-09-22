@@ -7,8 +7,8 @@ def preprocessTaskData(filename):
     df_dev["Name"]= df_dev["Name"].str.lower()
     df_dev["Skill"]= df_dev["Skill"].str.lower()
 
-    df_dev['x_coord'] = np.random.randint(1, 50, df_dev.shape[0])
-    df_dev['y_coord'] = np.random.randint(1, 50, df_dev.shape[0])
+    df_dev['x_coord'] = np.random.randint(1, 1000, df_dev.shape[0])
+    df_dev['y_coord'] = np.random.randint(1, 1000, df_dev.shape[0])
 
     df_dev.to_excel("Tasks.xlsx",index = False)
 
@@ -19,8 +19,8 @@ def preprocessApplicantData(filename):
     df_dev["Name"]= df_dev["Name"].str.lower()
     df_dev["Skill"]= df_dev["Skill"].str.lower()
 
-    df_dev['x_coord'] = np.random.randint(1, 50, df_dev.shape[0])
-    df_dev['y_coord'] = np.random.randint(1, 50, df_dev.shape[0])
+    df_dev['x_coord'] = np.random.randint(1, 1000, df_dev.shape[0])
+    df_dev['y_coord'] = np.random.randint(1, 1000, df_dev.shape[0])
 
     random_hour_start = np.random.randint(0,20, df_dev.shape[0])
     random_mint_start = np.random.randint(0,59, df_dev.shape[0])
