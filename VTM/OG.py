@@ -2,7 +2,9 @@ import numpy as np
 import pandas as pd
 import random
 import statistics
-
+import math
+import sys
+import time
 
 class SIM():
     def __init__(self):
@@ -11,9 +13,8 @@ class SIM():
         self.taskCandidateMapper = {}
         self.clock = 0
         self.time = 10
-        self.task_noBudget = dict()
         self.task_timeout = set()
-        self.candidate_noBudget = dict()
+      
 
     def getUnarrivedCandidates(self):
         unarrivedCandidates = []
@@ -30,21 +31,16 @@ class SIM():
         return unarrivedTasks
     
     
-    def startUp(self, C, T):
-        # for adding the C and T
-        # C is set of Candidates which are stored :: numpy
-        # T is set of Task which are stored   :: numpy
-
-        # adding the candidates
-        size, _ = C.shape
+    def startUp(self, C, T,size):
+       
         for c in range(size):
             data = list(C[c])
             newCandidate = Candidate(data)
             self.currCandidates.append(newCandidate)
 
-        # adding the tasks
-        size, _ = T.shape
-        for t in range(size):
+ 
+        sizeT, _ = T.shape
+        for t in range(sizeT):
             data = list(T[t])
             newTask = Task(data)
             self.currTasks.append(newTask)
@@ -60,7 +56,7 @@ class SIM():
 
         skill_demand = []
         skill_can = []
-        skill_demand = task.trimedSkill
+        skill_demand = task.skill
         skill_demand = skill_demand.split(",")
         skill_can = candidate.skills
         skill_can = skill_can.split(",")
@@ -92,11 +88,9 @@ class SIM():
          
         matchedSkillTask, matchedSkillCandidate = self.skill_matching(
             task, candidate)
-        reward_perHour = candidate.price
-        duration_totalHour = task.duration
-        net_reward=(reward_perHour*duration_totalHour)
+        net_reward=self.getCost(task,candidate)
         if(len(matchedSkillTask)):
-            return (net_reward/len(matchedSkillTask)), matchedSkillTask, matchedSkillCandidate
+            return (len(matchedSkillTask)/net_reward), matchedSkillTask, matchedSkillCandidate
         else:
             return 0, matchedSkillTask,matchedSkillCandidate
          
@@ -117,32 +111,25 @@ class SIM():
         for candidate in self.currCandidates:
             # task is arrived into the system
             arrived = (self.clock >= candidate.arrivalTime)
-            hasTimeBudget = (candidate.duration - candidate.utilisedTime) > 0
+            
             if not arrived:
-                continue
-            if not hasTimeBudget:
-                if candidate.name not in self.candidate_noBudget :
-                    self.candidate_noBudget[candidate.name] = [candidate.nme,candidate.budget,candidate.utilisedTime]
                 continue
             if candidate.isIdle:
                 assignableCandidate.append(candidate)
         return assignableCandidate
 
     def getCost(self, task, candidate):
-        candidateCharge = candidate.price
-        taskDuration = task.duration
-        priceRequiredforCandidate = candidateCharge*taskDuration
+        cost=1
+        curDist = math.sqrt((candidate.xcoord-task.xcoord)**2+(candidate.ycoord-task.ycoord)**2)
+        priceRequiredforCandidate=curDist*cost
         return priceRequiredforCandidate
 
     def getEligibleCandidatesForTask(self, task, candidates):
-        # filteration is based on the price
+   
         eligibleCandidates = []
         for candidate in candidates:
-            priceRequiredforCandidate = self.getCost(task, candidate)
-            if priceRequiredforCandidate == 0:
-                continue
-            if priceRequiredforCandidate <= task.remaningBudget:
-                eligibleCandidates.append(candidate)
+           
+            eligibleCandidates.append(candidate)
         return eligibleCandidates
 
     def updateCompletedTaskStatus(self):
@@ -181,20 +168,12 @@ class SIM():
             elif not assignable:
                     self.task_timeout.add(task.name)
             else:
-                if task.trimedSkill == "":
+                if task.skill == "":
                     # all skills are assigned, no need to asign any skills
                     continue
+                
                 else:
-                    if task.remaningBudget < 1:
-                        # no budget is remaining
-                        if task.name not in self.task_noBudget:
-                            self.task_noBudget[task.name] = [
-                                task.name, task.skillsBudget, task.remaningBudget]
-
-                            print("no budget is remaning..............")
-                        continue
-                    else:
-                        assignableTask.append(task)
+                    assignableTask.append(task)
         return assignableTask
 
     
@@ -238,21 +217,17 @@ class SIM():
 
                 # update skillset of task
                 matchedTaskSkills = ",".join(matchedTaskSkills)
-                # print(task.trimedSkill, ":", matchedTaskSkills)
-                task.trimedSkill = self.trimUnwanteds(
-                    task.trimedSkill, matchedTaskSkills)
-                #print("updated trimmed skills :", task.trimedSkill)
-                if task.trimedSkill == "":
+                # print(task.skill, ":", matchedTaskSkills)
+                task.skill = self.trimUnwanteds(
+                    task.skill, matchedTaskSkills)
+                #print("updated trimmed skills :", task.skill)
+                if task.skill == "":
                     timeTobeCompleted = self.clock + task.duration
                     # meta data to update task completion
                     self.taskCandidateMapper[task.name][4] = timeTobeCompleted
                     print("****one task will be complete", timeTobeCompleted)
 
-                # update remaning budget of the task
-                task.remaningBudget = task.remaningBudget - \
-                    self.getCost(task, electedCandidate)
-
-                # selectedCandidate.skills=self.trimUnwanteds(selectedCandidate.skills,matchedSkillCandidate)
+                
                 electedCandidate.clock_taskCompletion = self.clock + task.duration
 
             else:
@@ -293,7 +268,7 @@ class SIM():
         
         if len(waitingTimes) > 0:
             wa_utilityFactor = statistics.mean(
-                utilities)*sucessfullRatio
+                utilities)
             wa_waitingTime = statistics.mean(
                 waitingTimes)*sucessfullRatio
             
@@ -312,11 +287,7 @@ class SIM():
         print(result_status)
       
 
-        print("Task has lost Budget : ", len(self.task_noBudget))
-        print("Task timeout : ", len(self.task_timeout))
-        print("Candidates  has no time : ", len(self.task_noBudget))
-        print("Unarrived task count : ", len(self.getUnarrivedTasks()))
-        print("Unarrived candidate count : ", len(self.getUnarrivedCandidates()))
+
 
     def run(self, time=50):
         self.time = time
@@ -333,15 +304,10 @@ class Task():
     def __init__(self, data):
         self.name = data[0]
         self.skill = data[1]
-        self.skills_demand = int(data[2])
-        self.trimedSkill = data[3]
-        self.trimedSkillCount = int(data[4])
-        self.skillsBudget = float(data[5])
-        self.remaningBudget = float(data[5])
-        self.duration = int(data[6])
-        #self.arrivalTime = 1
-
-        self.arrivalTime = int(data[7])
+        self.xcoord = int(data[2])
+        self.ycoord = data[3]
+        self.duration = 1
+        self.arrivalTime = 1
         self.fTime = 200
         self.isCompleted = False
 
@@ -350,36 +316,36 @@ class Candidate():
     def __init__(self, data):
         self.name = data[0]
         self.skills = data[1]
-        self.price = float(data[2])
-        self.sucessRate = float(data[3])
-        self.skillCount = int(data[4])
-        self.rewardPerSkill = int(data[5])
-        self.bias = float(data[6])
-        self.normSucessRate = float(data[7])
-        if self.normSucessRate != self.normSucessRate:
-            self.normSucessRate = 0.001
-
-        self.duration = int(data[8])
-        #self.arrivalTime = 1
-        self.arrivalTime = int(data[9])
+        self.xcoord = int(data[2])
+        self.ycoord = int(data[3])
+    
+        self.slot_start = int(data[4])
+        self.slot_end = int(data[5])
+        self.duration = 10000
+        self.arrivalTime = 1
+      
 
         self.isIdle = True
         self.utilisedTime = 0
         self.clock_taskCompletion = 0
 
 
-tasks = pd.read_excel('sample_tasks_updated.xlsx').to_numpy()
-candidates = pd.read_excel('sample_candidates.xlsx').to_numpy()
+tasks = pd.read_excel('Tasks.xlsx').to_numpy()
+candidates = pd.read_excel('Applicants.xlsx').to_numpy()
 
+size=int(sys.argv[1])
+print("Size of candidaters == ",size)
+
+
+start_time=time.time()
 ag = SIM()
-ag.startUp(candidates, tasks)
+ag.startUp(candidates, tasks, size)
 ag.clock = 1
 c = ag.getAssignableCandidates()
 print(len(c))
 t = ag.getAssignableTasks()
 print(len(t))
-# ect = ag.getEligibleCandidatesForTask(t[0], c)
-# print(len(ect))
-# ag.update(ag.selection_random)
-# print(ag.taskCandidateMapper)
 ag.run(125)
+end_time=time.time()
+
+print("Exceution time--->",end_time-start_time)

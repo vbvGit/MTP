@@ -31,7 +31,7 @@ def preprocessTaskData_xl(filename):
     ws = wb.active
 
     T = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 7,min_col = 1,max_col = 4,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row = 98,min_col = 1,max_col = 4,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         T[row[0]].append(skills)
@@ -44,7 +44,7 @@ def preprocessVolunteerData_xl(filename):
     ws = wb.active
 
     A = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 7,min_col = 1,max_col = 6,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row = 1576,min_col = 1,max_col = 6,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         slot = preprocess_loc_slot_xl(row[4],row[5])
@@ -376,12 +376,16 @@ def computeNetUtilityScore(VTM,Applicants):
 '''
 Driver function
 '''
+#Cost is 1
 # Driver code for VTM and common slot
 def driver(T,A,cost):
     # Map volunteers to tasks
+    start_time=time.time()
     completed,VTM,G_ST,taskCompletionInfo = initialVolunteerTaskMappingAlgorithm(T,A,1)
+    
 
     print(taskCompletionInfo)
+    end_time=time.time()
 
     totalCompleted = 0
     for task in taskCompletionInfo:
@@ -399,11 +403,11 @@ def driver(T,A,cost):
     success_ratio = (totalCompleted/len(taskCompletionInfo))*100
     utilityScoreDict,NetUtilityScore = computeNetUtilityScore(VTM,list(A.keys()))
 
-    return VTM,success_ratio,utilityScoreDict,NetUtilityScore
+    return VTM,success_ratio,utilityScoreDict,NetUtilityScore,end_time-start_time
 
 
 start_time = time.time()
-Tasks = preprocessTaskData_xl("Tasks_Sample.xlsx")
-Applicants = preprocessVolunteerData_xl("Applicants_Sample.xlsx")
-VTM,success_ratio,utilityScores,NetUtilityScore = driver(Tasks,Applicants,1)
-print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\n\nUtility scores for all participants:\n{utilityScores}\n\nNetUtilityScore = {NetUtilityScore}\n\nTotal time taken : {time.time()-start_time}")
+Tasks = preprocessTaskData_xl("Tasks.xlsx")
+Applicants = preprocessVolunteerData_xl("Applicants.xlsx")
+VTM,success_ratio,utilityScores,NetUtilityScore,exeTime = driver(Tasks,Applicants,1)
+print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\n\nUtility scores for all participants:\n{utilityScores}\n\nNetUtilityScore = {NetUtilityScore}\n\nExecution Time={exeTime}")
