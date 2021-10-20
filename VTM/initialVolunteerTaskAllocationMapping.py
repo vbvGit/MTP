@@ -44,7 +44,9 @@ def preprocessVolunteerData_xl(filename):
     ws = wb.active
 
     A = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 1576,min_col = 1,max_col = 6,values_only = True):
+    
+    candidate_size=int(input("Insert desired candidate size (if 300 then put 301, same rule for all)"))
+    for row in ws.iter_rows(min_row = 2,max_row = candidate_size,min_col = 1,max_col = 6,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         slot = preprocess_loc_slot_xl(row[4],row[5])
@@ -386,10 +388,11 @@ def driver(T,A,cost):
 
     print(taskCompletionInfo)
     end_time=time.time()
-
+    intially_completed=0
     totalCompleted = 0
     for task in taskCompletionInfo:
         if taskCompletionInfo[task] == 0:
+            intially_completed+=1
             volunteersMapped = [volInfo[0] for volInfo in VTM[task]]
             slots = []
             for volunteer in volunteersMapped:
@@ -403,11 +406,11 @@ def driver(T,A,cost):
     success_ratio = (totalCompleted/len(taskCompletionInfo))*100
     utilityScoreDict,NetUtilityScore = computeNetUtilityScore(VTM,list(A.keys()))
 
-    return VTM,success_ratio,utilityScoreDict,NetUtilityScore,end_time-start_time
+    return VTM,success_ratio,utilityScoreDict,NetUtilityScore,end_time-start_time,intially_completed
 
 
 start_time = time.time()
 Tasks = preprocessTaskData_xl("Tasks.xlsx")
 Applicants = preprocessVolunteerData_xl("Applicants.xlsx")
-VTM,success_ratio,utilityScores,NetUtilityScore,exeTime = driver(Tasks,Applicants,1)
-print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\n\nUtility scores for all participants:\n{utilityScores}\n\nNetUtilityScore = {NetUtilityScore}\n\nExecution Time={exeTime}")
+VTM,success_ratio,utilityScores,NetUtilityScore,exeTime,completed = driver(Tasks,Applicants,1)
+print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\nNetUtilityScore = {NetUtilityScore}\n\nExecution Time={exeTime}\n\ninitially_completed_tasks_bfr_reco={completed}\n\nUtility scores for all participants:\n{utilityScores}\n\n")

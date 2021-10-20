@@ -305,7 +305,7 @@ class Task():
         self.name = data[0]
         self.skill = data[1]
         self.xcoord = int(data[2])
-        self.ycoord = data[3]
+        self.ycoord = int(data[3])
         self.duration = 1
         self.arrivalTime = 1
         self.fTime = 200
