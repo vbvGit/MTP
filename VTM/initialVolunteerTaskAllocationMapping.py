@@ -44,9 +44,7 @@ def preprocessVolunteerData_xl(filename):
     ws = wb.active
 
     A = defaultdict(list)
-    
-    candidate_size=int(input("Insert desired candidate size (if 300 then put 301, same rule for all)"))
-    for row in ws.iter_rows(min_row = 2,max_row = candidate_size,min_col = 1,max_col = 6,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row = 1576,min_col = 1,max_col = 6,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         slot = preprocess_loc_slot_xl(row[4],row[5])
@@ -181,6 +179,8 @@ def initialVolunteerTaskMappingAlgorithm(Tasks,Applicants,cost):
     numSkills : mber of 1's in G_ST which depicts the number of skills to be satisfied in total.
     '''
     G_ST,skillIdx,taskIdx,numSkills,taskCompletionInfo = generateSkillTaskMapperMatrix(Tasks)
+    # print(G_ST)
+    # print(skillIdx)
     # print(numSkills)
     # print(taskCompletionInfo)
 
@@ -200,11 +200,11 @@ def initialVolunteerTaskMappingAlgorithm(Tasks,Applicants,cost):
 
     # Iterate over the applicants to assign it to a particular task : O(A*(T*Skills + Skills + T)) = O(T*A*Skills)
     for volunteer,data in Applicants.items():
-        print(f"Current volunteer : {volunteer}")
+        # print(f"Current volunteer : {volunteer}")
 
         # Returns the list of tasks which match the skillset of a particular applicant
         suggestedTasks = recommendedTasks(data,skillIdx,taskIdx,G_ST)
-        print(suggestedTasks)
+        # print(suggestedTasks)
 
         # If no task matches the skillset of the applicant then go for the next applicant
         if len(suggestedTasks) == 0:
@@ -228,7 +228,7 @@ def initialVolunteerTaskMappingAlgorithm(Tasks,Applicants,cost):
             # NetUtilityScore+=utilityScore
 
             volunteerTaskMap[selectedtask].append((volunteer,len(Applicants[volunteer][0]),costIncured))
-            print(f"GST after assigning volunteer : {volunteer} to task : {selectedtask} :\n{G_ST}\n\n")
+            # print(f"GST after assigning volunteer : {volunteer} to task : {selectedtask} :\n{G_ST}\n\n")
 
         if numSkills == 0:
             return True,dict(volunteerTaskMap),G_ST,taskCompletionInfo
@@ -373,26 +373,27 @@ def computeNetUtilityScore(VTM,Applicants):
             NetUtilityScore+=utilityScoreDict[volunteerInfo[0]]
     return utilityScoreDict,NetUtilityScore 
 
-
+def computeSuccessRatio_1(taskCompletionInfo):
+    completed = 0
+    for task,remSkills in taskCompletionInfo.items():
+        if remSkills == 0:
+            completed+=1
+    return (completed/len(taskCompletionInfo))*100
 
 '''
 Driver function
 '''
-#Cost is 1
 # Driver code for VTM and common slot
 def driver(T,A,cost):
     # Map volunteers to tasks
-    start_time=time.time()
+    start = time.time()
     completed,VTM,G_ST,taskCompletionInfo = initialVolunteerTaskMappingAlgorithm(T,A,1)
-    
+    success_ratio_1 = computeSuccessRatio_1(taskCompletionInfo)
+    time_phase_1 = time.time()-start
 
-    print(taskCompletionInfo)
-    end_time=time.time()
-    intially_completed=0
     totalCompleted = 0
     for task in taskCompletionInfo:
         if taskCompletionInfo[task] == 0:
-            intially_completed+=1
             volunteersMapped = [volInfo[0] for volInfo in VTM[task]]
             slots = []
             for volunteer in volunteersMapped:
@@ -403,14 +404,14 @@ def driver(T,A,cost):
             else:
                 totalCompleted+=1
                 VTM[task].append(commonslot)
-    success_ratio = (totalCompleted/len(taskCompletionInfo))*100
+    success_ratio_2 = (totalCompleted/len(taskCompletionInfo))*100
     utilityScoreDict,NetUtilityScore = computeNetUtilityScore(VTM,list(A.keys()))
 
-    return VTM,success_ratio,utilityScoreDict,NetUtilityScore,end_time-start_time,intially_completed
+    return VTM,success_ratio_1,success_ratio_2,utilityScoreDict,NetUtilityScore,time_phase_1
 
 
 start_time = time.time()
 Tasks = preprocessTaskData_xl("Tasks.xlsx")
 Applicants = preprocessVolunteerData_xl("Applicants.xlsx")
-VTM,success_ratio,utilityScores,NetUtilityScore,exeTime,completed = driver(Tasks,Applicants,1)
-print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\nNetUtilityScore = {NetUtilityScore}\n\nExecution Time={exeTime}\n\ninitially_completed_tasks_bfr_reco={completed}\n\nUtility scores for all participants:\n{utilityScores}\n\n")
+VTM,success_ratio_1,success_ratio_2,utilityScores,NetUtilityScore,time_phase_1 = driver(Tasks,Applicants,1)
+print(f"\nFinal Result:\n\nR : {VTM}\n\nUtility scores for all participants:\n{utilityScores}\n\nSuccess_Ratio after Phase_1  = {success_ratio_1}\n\nSuccess_Ratio after Phase_2  = {success_ratio_2}\n\nNetUtilityScore = {NetUtilityScore}\n\nTime taken to complete Phase_1 : {time_phase_1}\n\nTotal time taken : {time.time()-start_time}")
