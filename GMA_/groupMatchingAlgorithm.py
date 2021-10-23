@@ -31,7 +31,7 @@ def preprocessTaskData_xl(filename):
     ws = wb.active
 
     T = defaultdict(list)
-    for row in ws.iter_rows(min_row = 2,max_row = 98,min_col = 1,max_col = 4,values_only = True):
+    for row in ws.iter_rows(min_row = 2,max_row =98,min_col = 1,max_col = 4,values_only = True):
         skills = preprocess_skills_xl(row[1])
         loacation = preprocess_loc_slot_xl(row[2],row[3])
         T[row[0]].append(skills)
@@ -63,7 +63,7 @@ def preprocessApplicatntSkills(A,reqSkills):
     return A
 
 def initVisistedTasks_Vw(Applicants):
-    Vw = dict(zip(list(Applicants.keys()),[{} for i in range(len(Applicants))]))
+    Vw = dict(zip(list(Applicants.keys()),[[] for i in range(len(Applicants))]))
     return Vw
 
 def initResultantTeam_R_1(Tasks):
@@ -119,13 +119,16 @@ def groupMatchingAlgorithm_GMA(Tasks,Applicants,cost):
 
         for applicant,availability in availableApplicants.items():
             if availableApplicants[applicant] == 1:
+                # print()
+                # print(f"Current available volunteer : {applicant}")
                 minDistTask = computeMinDistTask(Applicants[applicant][1],Tasks)
+                # print(f"Minimum distance task for volunteer {applicant} : {minDistTask}")
                 if minDistTask not in visitedTasks_Vw[applicant]:
                     # Gt[minDistTask].add(applicant)
-                    visitedTasks_Vw[applicant][minDistTask] = 1
+                    visitedTasks_Vw[applicant].append(minDistTask)
 
                     commonSkills = computeCommonSkills(Applicants[applicant][0],Tasks[minDistTask][0])
-
+                    # print(f"Skills common between volunteer {applicant} and task : {minDistTask} : {commonSkills} ")
                     for skill in commonSkills:
                         curDist = computeDist(Tasks[minDistTask][1],Applicants[applicant][1])
                         if curDist < R_ResultantTeam_SkillsKey[minDistTask][skill][1]:
@@ -142,26 +145,83 @@ def groupMatchingAlgorithm_GMA(Tasks,Applicants,cost):
                             R_ResultantTeam_WorkersKey[minDistTask][applicant].append(skill)
                             availableApplicants[applicant] = 0
                             terminal = 0
+                    # print(f"R after assigning {applicant} to task {minDistTask}\n{R_ResultantTeam_SkillsKey}\n")
+                # else:
+                    # print(f"{minDistTask} is already visited by {applicant}")
 
         if terminal == 1 or availableApplicants == {}:
             break
 
-    return R_ResultantTeam_WorkersKey,R_ResultantTeam_SkillsKey
+    return R_ResultantTeam_SkillsKey
 
+def computeSuccessRatio(R):
+    completed = 0
+    tasksCompleted = []
+    for task,Skills in R.items():
+        flag = 1
+        for skill,info in Skills.items():
+            if info[0] is None:
+                flag = 0
+                break
+        if flag:
+            completed+=1
+            tasksCompleted.append(task)
+    return (completed/len(R))*100,tasksCompleted
 
+def computeNetUtilityScore(R,Applicants):
+    utilityScoreDict = dict(zip(Applicants,[[0,0] for i in range(len(Applicants))]))
+    NetUtilityScore = 0 
+    for task,Skills in R.items():
+        for skill,info in Skills.items():
+            if info[0] is not None:
+                utilityScoreDict[info[0]][0]+=1
+                utilityScoreDict[info[0]][1]+=info[1]
+    utilityScores = dict(zip(Applicants,[0 for i in range(len(Applicants))]))
+    for applicant,info in utilityScoreDict.items():
+        if info[0] == 0:
+            utilityScores[applicant] = 0
+        elif info[1] == 0:
+            utilityScores[applicant] = info[0]/3*info[0]
+        else:
+            utilityScores[applicant] = info[0]/info[1]
+        NetUtilityScore+=utilityScores[applicant]
+    return utilityScores,NetUtilityScore 
 
 
 # Driver code for VTM and common slot
 def driver(T,A,cost):
     # Map volunteers to tasks
-    R1,R2 = groupMatchingAlgorithm_GMA(T,A,1)
-    print(R1)
-    print()
-    print(R2)
+    start = time.time()
+    R = groupMatchingAlgorithm_GMA(T,A,1)
+    successRatio_1,tasksCompleted = computeSuccessRatio(R)
+    completed = len(tasksCompleted)
+    time_phase_1 = time.time()-start
+    # print(completed)
+    for task in tasksCompleted:
+        volunteersMapped = set()
+        for skill in R[task]:
+            volunteersMapped.add(R[task][skill][0])
+
+        volunteersMapped = list(volunteersMapped)
+        flag = 1
+        # print()
+        # print(R[task])
+        # print(task)
+        # print(A[volunteersMapped[0]][2])
+        for volunteer in volunteersMapped[1:]:
+            print(A[volunteer][2])
+            if A[volunteer][2] != A[volunteersMapped[0]][2]:
+                flag = 0
+        if flag == 0:
+            completed-=1
+    # print(completed)
+    successRatio_2 = (completed/len(T))*100
+    utilityScore,NetUtilityScore = computeNetUtilityScore(R,list(A.keys()))
+    return R,successRatio_1,successRatio_2,utilityScore,NetUtilityScore,time_phase_1
 
 
 start_time = time.time()
 Tasks = preprocessTaskData_xl("Tasks.xlsx")
 Applicants = preprocessVolunteerData_xl("Applicants.xlsx")
-driver(Tasks,Applicants,1)
-# print(f"VTM:\n{VTM}\n\nSuccess_Ratio = {success_ratio}\n\nUtility scores for all participants:\n{utilityScores}\n\nNetUtilityScore = {NetUtilityScore}\n\nTotal time taken : {time.time()-start_time}")
+R,success_ratio_1,success_ratio_2,utilityScores,NetUtilityScore,time_phase_1 = driver(Tasks,Applicants,1)
+print(f"\nFinal Result:\n\nR : {R}\n\nUtility scores for all participants:\n{utilityScores}\n\nSuccess_Ratio after Phase_1  = {success_ratio_1}\n\nSuccess_Ratio after Phase_2  = {success_ratio_2}\n\nNetUtilityScore = {NetUtilityScore}\n\nTime taken to complete Phase_1 : {time_phase_1}\n\nTotal time taken : {time.time()-start_time}")
