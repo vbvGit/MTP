@@ -423,25 +423,6 @@ def getTopMatchedTasks(volunteerSkills,incompleteTaskObjects,requiredSkills,G_ST
 
     return recommend
 
-# Compute the nearest task among all the given tasks for the given applicant location : O(T)
-def getCostEfficientTask(volunteerLocation,tasks,costPerKM):
-
-    minCost = float('inf')
-    minCostTask = None
-
-    for task in tasks:
-        source = volunteerLocation
-        destination = task.location
-
-        distance = math.sqrt((destination[0]-source[0])**2+(destination[1]-source[1])**2)
-        costIncured = distance*costPerKM
-
-        if costIncured<minCost:
-            minCost = costIncured
-            minCostTask = task
-
-    return minCostTask,minCost
-
 
 def getMostWillingTask(volunteer,tasks):
     maxWillingnesss = -1
@@ -489,9 +470,9 @@ def generateVolunteerTaskMap(G_ST,taskObjects,volunteerObjects,requiredSkills,co
         else:
             '''
             If tasks are suggested for the given volunteer then we need to compare the most optimal task 
-            based on the distance of that volunteer from each task and then assign it to the nearest task
+            based on the willingness of that volunteer for each task and then assign it to the most willing task
             '''
-            # selectedtask,costIncured = getCostEfficientTask(volunteer.location,list(suggestedTasks.keys()),costPerKM)
+            
             selectedtask = getMostWillingTask(volunteer,suggestedTasks)
 
             if selectedtask.budget - volunteer.remuneration>=0:
